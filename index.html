@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="cdom.js"></script>
+    </head>
+    <body>
+        <div id="layoutroot"></div>
+    </body>
+</html>
+<script>
+function resizer_Vcontainer_addEL (container,framesMin,callback=()=>{}) {
+    container.querySelector(":scope > .resizer_splitter").addEventListener("pointerdown",(e)=>{
+        let resizer = container.querySelector(":scope > .resizer_splitter").getBoundingClientRect();
+        let resizerW = resizer.bottom - resizer.top;
+        let resize = (e)=>{
+            let containerRect = container.getBoundingClientRect();
+            let y = ((n,min,max)=>{if (n<min) {n=min}else if (n>max) {n=max};return n;})(e.y-containerRect.y,framesMin,containerRect.height-resizerW-framesMin);
+            container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${y}%`;
+            container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${containerRect.height-resizerW-y}%`;
+            callback();
+        }
+        document.addEventListener("pointermove",resize,false);
+        document.addEventListener("pointerup",()=>{document.removeEventListener("pointermove",resize,false);},false);
+        e.target.setPointerCapture(e.pointerId);
+    });
+    console.log(container)
+    let p = container.dataset["proportion"].split(":").map((x)=>{return Number(x);});
+    container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${(p[0]*100/(p[0]+p[1]))}%`;
+    container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${(p[1]*100/(p[0]+p[1]))}%`;
+}
+function resizer_Hcontainer_addEL (container,framesMin,callback=()=>{}) {
+    container.querySelector(":scope > .resizer_splitter").addEventListener("pointerdown",(e)=>{
+        let resizer = container.querySelector(":scope > .resizer_splitter").getBoundingClientRect();
+        let resizerW = resizer.right - resizer.left;
+        let resize = (e)=>{
+            let containerRect = container.getBoundingClientRect();
+            let x = ((n,min,max)=>{if (n<min) {n=min}else if (n>max) {n=max};return n;})(e.x-containerRect.x,framesMin,containerRect.width-resizerW-framesMin);
+            container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${x}%`;
+            container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${containerRect.width-resizerW-x}%`;
+            callback();
+        }
+        document.addEventListener("pointermove",resize,false);
+        document.addEventListener("pointerup",()=>{document.removeEventListener("pointermove",resize,false);},false);
+        e.target.setPointerCapture(e.pointerId);
+    });
+    let p = container.dataset["proportion"].split(":").map((x)=>{return Number(x);});
+    container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${(p[0]*100/(p[0]+p[1]))}%`;
+    container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${(p[1]*100/(p[0]+p[1]))}%`;
+}
+
+function initlayout(dom) {
+    dom.className = "layout_root"
+    dom.replaceChildren(makeLayoutDOM(layout,"splitlayout"));
+}
+function makeLayoutDOM(node,pid) {
+    console.log(...node)
+    var children = [];
+    for (const i in node[2]) {
+        if (node[2][i][0]=="h"||node[2][i][0]=="v") {
+            children.push(elm("div",{class:"resizer_content"},[makeLayoutDOM(node[2][i],`${pid}_${i}`)]));
+        }
+        else if (node[2][i][0]=="c") {
+            children.push(elm("div",{class:"resizer_content"},[contents[node[2][i][1]]()]));
+            //children.push(contents[node[2][i][1]])
+        }
+        if (i<node[2].length-1) {
+            children.push(elm("div",{class:"resizer_splitter"},[]));
+        }
+    }
+    return elm("div",{data:{proportion:node[1].join(":"),id:pid},class:`resizer_${node[0].toUpperCase()}container`},children);
+}
+
+
+
+</script>
+<script>
+
+const layout = ["v",[3,4],[
+    ["h",[4,8],[["c","text1"],["c","text2"]]],
+    ["v",[4,8],[["c","text1"],["c","text2"]]],
+]]
+const contents = {
+    text1: ()=>{return elm("h1",{width:100,height:100},[textelm("やっほ～")])},
+    text2: ()=>{return elm("h1",{width:100,height:100},[textelm("うごいたぞ～")])},
+}
+initlayout(document.querySelector("#layoutroot"))
+document.querySelectorAll(".resizer_Vcontainer").forEach((x)=>{resizer_Vcontainer_addEL(x,50);})
+document.querySelectorAll(".resizer_Hcontainer").forEach((x)=>{resizer_Hcontainer_addEL(x,50);})
+
+</script>
+<style>
+:root {
+    color-scheme: dark;
+    user-select: none;
+}
+body {
+    margin: 0;
+    padding: 0;
+    height: 100dvh;
+    width: 100dvw;
+    overflow: hidden;
+}
+#layoutroot {
+    height: 100%;
+    width: 100%;
+}
+
+
+.layout_root {
+    height: 100%;
+    width: 100%;
+}
+.layout_root>div {
+    height: calc(100% - 6px);
+    width: calc(100% - 6px);
+    padding: 3px;
+}
+
+</style>
+<style>
+/* resizer */
+.resizer_Vcontainer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    & > .resizer_content {
+        display: block;
+        min-height: 0px;
+        height: 100%;
+        overflow: hidden;
+        padding: 3px;
+        border-radius: 5px;
+        &:hover {
+            box-shadow: 0px 0px 5px 0px white;
+        }
+    }
+    & > .resizer_splitter {
+        height: 5px;
+        margin: 2px;
+        width: calc(100% - 10px);
+        border-radius: 3px;
+        flex: none;
+        cursor: row-resize;
+        background-color: #7c7c7c;
+    }
+    & > .resizer_splitter:hover {
+        background-color: #acacac;
+    }
+}
+.resizer_Hcontainer {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    & > .resizer_content {
+        display: block;
+        min-width: 0px;
+        width: 100%;
+        overflow: hidden;
+        padding: 3px;
+        border-radius: 5px;
+        &:hover {
+            box-shadow: 0px 0px 5px 0px white;
+        }
+    }
+    & > .resizer_splitter {
+        width: 5px;
+        margin: 2px;
+        height: calc(100% - 10px);
+        border-radius: 3px;
+        flex: none;
+        cursor: col-resize;
+        background-color: #7c7c7c;
+    }
+    & > .resizer_splitter:hover {
+        background-color: #acacac;
+    }
+}
+</style>
