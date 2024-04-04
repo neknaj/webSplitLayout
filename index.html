@@ -8,49 +8,69 @@
     </body>
 </html>
 <script>
-function resizer_Vcontainer_addEL (container,framesMin,callback=()=>{}) {
-    container.querySelector(":scope > .resizer_splitter").addEventListener("pointerdown",(e)=>{
-        let resizer = container.querySelector(":scope > .resizer_splitter").getBoundingClientRect();
-        let resizerW = resizer.bottom - resizer.top;
-        let resize = (e)=>{
-            let containerRect = container.getBoundingClientRect();
-            let y = ((n,min,max)=>{if (n<min) {n=min}else if (n>max) {n=max};return n;})(e.y-containerRect.y,framesMin,containerRect.height-resizerW-framesMin);
-            container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${y}%`;
-            container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${containerRect.height-resizerW-y}%`;
-            callback();
-        }
-        document.addEventListener("pointermove",resize,false);
-        document.addEventListener("pointerup",()=>{document.removeEventListener("pointermove",resize,false);},false);
-        e.target.setPointerCapture(e.pointerId);
-    });
-    console.log(container)
-    let p = container.dataset["proportion"].split(":").map((x)=>{return Number(x);});
-    container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${(p[0]*100/(p[0]+p[1]))}%`;
-    container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${(p[1]*100/(p[0]+p[1]))}%`;
-}
-function resizer_Hcontainer_addEL (container,framesMin,callback=()=>{}) {
-    container.querySelector(":scope > .resizer_splitter").addEventListener("pointerdown",(e)=>{
-        let resizer = container.querySelector(":scope > .resizer_splitter").getBoundingClientRect();
-        let resizerW = resizer.right - resizer.left;
-        let resize = (e)=>{
-            let containerRect = container.getBoundingClientRect();
-            let x = ((n,min,max)=>{if (n<min) {n=min}else if (n>max) {n=max};return n;})(e.x-containerRect.x,framesMin,containerRect.width-resizerW-framesMin);
-            container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${x}%`;
-            container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${containerRect.width-resizerW-x}%`;
-            callback();
-        }
-        document.addEventListener("pointermove",resize,false);
-        document.addEventListener("pointerup",()=>{document.removeEventListener("pointermove",resize,false);},false);
-        e.target.setPointerCapture(e.pointerId);
-    });
-    let p = container.dataset["proportion"].split(":").map((x)=>{return Number(x);});
-    container.querySelectorAll(":scope > .resizer_content")[0].style.flexBasis = `${(p[0]*100/(p[0]+p[1]))}%`;
-    container.querySelectorAll(":scope > .resizer_content")[1].style.flexBasis = `${(p[1]*100/(p[0]+p[1]))}%`;
+function setResizer (container,framesMin,callback=()=>{}) {
+    const p = container.dataset.proportion.split(":").map((x)=>{return Number(x);});
+    const adj = 1/p.reduce((s,x)=>{return s+x},0);
+    const percent = p.map((x)=>{return x*100*adj});
+    for (const i in percent) {
+        container.querySelectorAll(":scope > .resizer_content")[i].style.flexBasis = `${(percent[i])}%`;
+    }
+    container.dataset.proportion = percent.join(":");
+    const type = container.dataset.type=="v";
+    Array.from(container.querySelectorAll(":scope > .resizer_splitter")).map((splitter,i)=>{
+        splitter.addEventListener("pointerdown",(e)=>{
+            console.log(type)
+            const rect = container.getBoundingClientRect();
+            const rects = type?rect.height:rect.width;
+            const rectx = type?rect.y:rect.x;
+            const resizer = container.querySelector(":scope > .resizer_splitter").getBoundingClientRect();
+            const resizerW = type?resizer.height:resizer.width;
+            const resize1 = (e)=>{
+                const ex = type?e.y:e.x;
+                const percent = container.dataset.proportion.split(":").map((x)=>{return Number(x);});
+                const width = rects - resizerW*(percent.length-1);
+                const barprop = Math.min(Math.max((ex-rectx)/rects,0.01),0.99);
+                const left = percent.slice(0,i+1);
+                const right = percent.slice(i+1);
+                const leftadj = left.reduce((s,x)=>{return s+x},0)==0?1:1/left.reduce((s,x)=>{return s+x},0);
+                const rightadj = right.reduce((s,x)=>{return s+x},0)==0?1:1/right.reduce((s,x)=>{return s+x},0);
+                const newpercent = left.map((x)=>{return x*barprop*leftadj*100}).concat(right.map((x)=>{return x*(1-barprop)*rightadj*100})).map((x)=>{return x<0.01?1:x;});
+                container.dataset.proportion = newpercent.join(":");
+                for (const i in newpercent) {
+                    container.querySelectorAll(":scope > .resizer_content")[i].style.flexBasis = `${(newpercent[i])}%`;
+                }
+                callback();
+            }
+            const resize2 = (e)=>{
+                const ex = type?e.y:e.x;
+                const percent = container.dataset.proportion.split(":").map((x)=>{return Number(x);});
+                const width = rects - resizerW*(percent.length-1);
+                const left = percent.slice(0,i+1-1);
+                const right = percent.slice(i+1+1);
+                const min = left.reduce((s,x)=>{return s+x},0)*rects/100+resizerW*i;
+                const max = rects - (right.reduce((s,x)=>{return s+x},0)*rects/100+resizerW*(percent.length-i-2));
+                const newx = Math.min(Math.max(ex-rectx,min),max);
+                if (max-newx<1|newx-min<1) {
+                    resize1(e);callback();return;
+                }
+                const newpercent = [].concat(left,[(newx-min)*100/width],[(max-newx)*100/width],right);
+                container.dataset.proportion = newpercent.join(":");
+                for (const i in newpercent) {
+                    container.querySelectorAll(":scope > .resizer_content")[i].style.flexBasis = `${(newpercent[i])}%`;
+                }
+                callback();
+            }
+            document.addEventListener("pointermove",resize2,false);
+            document.addEventListener("pointerup",()=>{document.removeEventListener("pointermove",resize2,false);},false);
+            e.target.setPointerCapture(e.pointerId);
+        });
+    })
 }
 
 function initlayout(dom) {
-    dom.className = "layout_root"
+    dom.className = "layout_root";
     dom.replaceChildren(makeLayoutDOM(layout,"splitlayout"));
+    dom.querySelectorAll(".resizer_container").forEach((x)=>{setResizer(x,50);})
 }
 function makeLayoutDOM(node,pid) {
     console.log(...node)
@@ -67,7 +87,7 @@ function makeLayoutDOM(node,pid) {
             children.push(elm("div",{class:"resizer_splitter"},[]));
         }
     }
-    return elm("div",{data:{proportion:node[1].join(":"),id:pid},class:`resizer_${node[0].toUpperCase()}container`},children);
+    return elm("div",{data:{proportion:node[1].join(":"),id:pid,type:node[0]},class:`resizer_container`},children);
 }
 
 
@@ -75,17 +95,19 @@ function makeLayoutDOM(node,pid) {
 </script>
 <script>
 
-const layout = ["v",[3,4],[
-    ["h",[4,8],[["c","text1"],["c","text2"]]],
-    ["v",[4,8],[["c","text1"],["c","text2"]]],
+const layout = ["h",[3,5,4],[
+    ["v",[4,8,3,4],[["c","text1"],["c","text2"],["c","text1"],["c","text2"]]],
+    ["v",[4,8],[["c","text1"],["h",[4,8],[["c","text2"],["c","text1"]]]]],
+    ["v",[4,8,4],[["c","text1"],["c","text2"],["c","text1"]]],
 ]]
 const contents = {
     text1: ()=>{return elm("h1",{width:100,height:100},[textelm("やっほ～")])},
     text2: ()=>{return elm("h1",{width:100,height:100},[textelm("うごいたぞ～")])},
 }
+const KeyboardEvents = [
+    {target:"img2",type:"keydown",key:"ctrl+c"},
+]
 initlayout(document.querySelector("#layoutroot"))
-document.querySelectorAll(".resizer_Vcontainer").forEach((x)=>{resizer_Vcontainer_addEL(x,50);})
-document.querySelectorAll(".resizer_Hcontainer").forEach((x)=>{resizer_Hcontainer_addEL(x,50);})
 
 </script>
 <style>
@@ -116,10 +138,15 @@ body {
     padding: 3px;
 }
 
+h1 {
+    padding: 5px;
+    margin: 5px;
+}
+
 </style>
 <style>
 /* resizer */
-.resizer_Vcontainer {
+.resizer_container[data-type="v"] {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -147,7 +174,7 @@ body {
         background-color: #acacac;
     }
 }
-.resizer_Hcontainer {
+.resizer_container[data-type="h"] {
     display: flex;
     flex-direction: row;
     height: 100%;
