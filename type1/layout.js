@@ -64,26 +64,26 @@ function setResizer (container,node,callback=()=>{}) {
     return container;
 }
 
-function initlayout() {
+function layoutroot(layoutroot) {
     layoutroot.className = "layout_root";
-    updatelayout();
 }
-function updatelayout() {
-    layoutroot.replaceChildren(makeLayoutDOM(layout,"splitlayout"));
+function initlayout(elm,layout,contents) {
+    elm.className = "layout_root";
+    elm.replaceChildren(makeLayoutDOM(layout,"splitlayout",contents));
 }
-function makeLayoutDOM(node,pid) {
+function makeLayoutDOM(node,pid,contents) {
     var children = [];
     for (const i in node[2]) {
         if (node[2]?.[i]?.[0]=="h"||node[2]?.[i]?.[0]=="v") {
-            children.push(elm("div",{class:"resizer_content"},[makeLayoutDOM(node[2][i],`${pid}_${i}`)]));
+            children.push(elm("div",{class:"resizer_content"},[makeLayoutDOM(node[2][i],`${pid}_${i}`,contents)]));
         }
         else if (node[2]?.[i]?.[0]=="c") {
-            children.push(elm("div",{class:"resizer_content"},[contentarea(node[2][i][1],node[2][i])]));
+            children.push(elm("div",{class:"resizer_content"},[contentarea(node[2][i][1],node[2][i],contents)]));
         }
         else {
             console.log("")
             node[2][i] = ["c","empty"]
-            children.push(elm("div",{class:"resizer_content"},[contentarea(node[2][i][1],node[2][i])]));
+            children.push(elm("div",{class:"resizer_content"},[contentarea(node[2][i][1],node[2][i],contents)]));
         }
         if (i<node[2].length-1) {
             children.push(elm("div",{class:"resizer_splitter"},[]));
@@ -92,16 +92,8 @@ function makeLayoutDOM(node,pid) {
     return setResizer(elm("div",{data:{proportion:node[1].join(":"),id:pid,type:node[0]},class:`resizer_container`},children),node);
 }
 
-const contentsmenu = (name,node)=>{
-    const select = elm("select",{class:"layouttab"},
-        Object.keys(contents).map((x)=>{const opt={};if(x==name){opt.selected=true};return elm("option",opt,[textelm(x)])})
-    )
-    select.onchange = (e)=>{node[1]=e.target.value;updatelayout();}
-    return select;
-}
-const contentarea = (name,node)=>{
+const contentarea = (name,node,contents)=>{
     return elm("div",{class:"layoutcontentarea"},[
-        elm("div",{class:"layouttabarea",draggable:true},[contentsmenu(name,node)]),
         elm("div",{class:"layoutcontent"},[contents[name]()]),
     ])
 }

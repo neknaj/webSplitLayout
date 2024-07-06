@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="layout.js"></script>
+        <link rel="stylesheet" href="layout.css"></head>
+        <script src="https://cdn.jsdelivr.net/gh/neknaj/cDom/cdom.js"></script>
+    </head>
+    <body>
+        <div id="layoutroot"></div>
+    </body>
+</html>
+<script>
+
+initlayout(
+    document.querySelector("#layoutroot"),
+    ["h",[3,5,4],[
+        ["v",[4,8,3,4],[["c","text1"],["c","text2"],["c","text1"],["c","text2"]]],
+        ["v",[4,8],[["c","text1"],["h",[4,8],[["c","text2"],null]]]],
+        ["v",[4,8,4],[["c","text1"],["c","text2"],["c","text1"]]],
+    ]],
+    {
+        text1: ()=>{return elm("h1",{},[textelm("Text1")])},
+        text2: ()=>{return elm("h1",{},[textelm("Text2")])},
+        empty: ()=>{return elm("h1",{},[textelm("empty")])},
+    }
+)
+
+</script>
+<style>
+
+:root {
+    color-scheme: dark;
+    user-select: none;
+}
+body {
+    margin: 0;
+    padding: 0;
+    height: 100dvh;
+    width: 100dvw;
+    overflow: hidden;
+}
+#layoutroot {
+    height: 100%;
+    width: 100%;
+}
+
+h1 {
+    padding: 5px;
+    margin: 5px;
+}
+
+</style>

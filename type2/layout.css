@@ -48,15 +48,21 @@
         }
         & .layoutcontentarea {
             height: 100%;
-            & .layouttab {
-                display: block;
-                width: min-content;
-                background-color: #2a2a2a;
+            & .layouttabarea {
+                font-size: 10px;
+                width: fit-content;
                 border: 1px solid rgb(65, 65, 65);
                 border-bottom: 0.5px;
                 border-radius: 4px 4px 0px 0px;
-                padding: 0px 2px 1px 10px;
-                font-size: 10px;
+                & span {
+                }
+                & select {
+                    width: min-content;
+                    background-color: #2a2a2a;
+                    padding: 0px 2px 1px 10px;
+                    height: 10px;
+                    font-size: 15px;
+                }
             }
             & .layoutcontent {
                 border: 1px solid rgb(65, 65, 65);
