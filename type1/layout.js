@@ -70,6 +70,7 @@ function layoutroot(layoutroot) {
 function initlayout(elm,layout,contents) {
     elm.className = "layout_root";
     elm.replaceChildren(makeLayoutDOM(layout,"splitlayout",contents));
+    elm.dispatchEvent(new CustomEvent("doneinitlayout"));
 }
 function makeLayoutDOM(node,pid,contents) {
     var children = [];
