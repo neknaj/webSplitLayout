@@ -35,6 +35,7 @@ function setResizer (container,node,callback=()=>{}) {
                     container.querySelectorAll(":scope > .resizer_content")[i].style.flexBasis = `${(newpercent[i])}%`;
                 }
                 callback();
+                container.dispatchEvent(new CustomEvent("resize"));
             }
             const resize2 = (e)=>{
                 const percent = container.dataset.proportion.split(":").map((x)=>{return Number(x);});
@@ -55,12 +56,17 @@ function setResizer (container,node,callback=()=>{}) {
                     container.querySelectorAll(":scope > .resizer_content")[i].style.flexBasis = `${(newpercent[i])}%`;
                 }
                 callback();
+                container.dispatchEvent(new CustomEvent("resize"));
             }
             document.addEventListener("pointermove",resize2,false);
-            document.addEventListener("pointerup",()=>{document.removeEventListener("pointermove",resize2,false);},false);
+            document.addEventListener("pointerup",()=>{
+                document.removeEventListener("pointermove",resize2,false);
+                container.dispatchEvent(new CustomEvent("resizeend"));
+            },false);
             e.target.setPointerCapture(e.pointerId);
         });
     })
+    container.dispatchEvent(new CustomEvent("resizestart"));
     return container;
 }
 
